@@ -273,10 +273,86 @@
       return data.parse && data.parse.text ? data.parse.text : null;
     }
 
-    // Remove citations, then mask year-like mentions but:
-    //  - DO NOT mask numbers written fully or partly in words (e.g., "two thousand", "2 million")
-    //  - DO NOT mask plain numbers > 2025
-    //  - DO mask BC/BCE/AD/CE-labelled dates and centuries/decades when appropriate
+    // Escape for regex
+    function regexEscape(s) {
+      return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // Protect patterns before masking: numbers-with-commas and number+unit (incl. currency, percentages, areas, speeds, etc.)
+    function protectQuantities(text) {
+      const protections = [];
+      let idx = 0;
+
+      // (A) Comma-formatted numbers like 3,856 or 12,000,000 (optional decimal)
+      const commaNum = /\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b/g;
+      text = text.replace(commaNum, (m) => {
+        const token = `__PROTECT_COMMA_${idx++}__`;
+        protections.push([token, m]);
+        return token;
+      });
+
+      // (B) Numbers immediately followed by common units (do not treat as years)
+      const units = [
+        // length
+        'm','meter','meters','metre','metres',
+        'km','kilometer','kilometers','kilometre','kilometres',
+        'cm','centimeter','centimeters','centimetre','centimetres',
+        'mm','millimeter','millimeters','millimetre','millimetres',
+        'mi','mile','miles','yd','yard','yards','ft','foot','feet','in','inch','inches',
+        'nm','nautical mile','nautical miles',
+        // area
+        'km²','km2','m²','m2','cm²','cm2','ha','hectare','hectares',
+        'sq km','sq mi','square kilometre','square kilometres','square kilometer','square kilometers',
+        'square mile','square miles',
+        // speed
+        'km/h','kph','mph','m/s',
+        // mass
+        'kg','kilogram','kilograms','g','gram','grams','mg','ton','tons','tonne','tonnes','t','lb','lbs','pound','pounds',
+        // percentages & currency
+        '%','percent','per cent',
+        '£','€','\\$'
+      ];
+
+      // Build regex that matches: number (with optional decimal) optional space or thin space, then unit token
+      const unitAlt = units.map(u => regexEscape(u)).join('|');
+      const numUnit = new RegExp(
+        String.raw`\b\d+(?:[.,]\d+)?(?:\s|[\u00A0\u202F])?(?:${unitAlt})\b`,
+        'gi'
+      );
+
+      text = text.replace(numUnit, (m) => {
+        const token = `__PROTECT_UNIT_${idx++}__`;
+        protections.push([token, m]);
+        return token;
+      });
+
+      // (C) Currency formats like £12,500 or $3.5m (simple cover)
+      const currency = /(?:[$£€])\s?\d[\d,]*(?:\.\d+)?\s?(?:m|million|bn|billion|k|thousand)?\b/gi;
+      text = text.replace(currency, (m) => {
+        const token = `__PROTECT_CUR_${idx++}__`;
+        protections.push([token, m]);
+        return token;
+      });
+
+      // (D) Numeric + word amounts (already handled earlier in your version, keep it)
+      const wordNum = /\b\d[\d,]*\s+(million|billion|thousand|hundred|dozen|lakhs?|crores?)\b/gi;
+      text = text.replace(wordNum, (m) => {
+        const token = `__PROTECT_WORDNUM_${idx++}__`;
+        protections.push([token, m]);
+        return token;
+      });
+
+      return { text, protections };
+    }
+
+    function restoreQuantities(text, protections) {
+      for (const [token, orig] of protections) {
+        text = text.replace(token, orig);
+      }
+      return text;
+    }
+
+    // Remove citations, then mask year-like mentions; keep protected quantities intact.
     function sanitizeHTMLPreserveStructure(html) {
       const container = document.createElement('div');
       container.innerHTML = html;
@@ -311,29 +387,10 @@
       return container.innerHTML;
     }
 
-    // Protect "partly in words" numeric phrases like "2 million" before masking, then restore.
-    function protectWordNumbers(text) {
-      const protections = [];
-      const pattern = /\b\d[\d,]*\s+(million|billion|thousand|hundred|dozen|lakhs?|crores?)\b/gi;
-      let idx = 0;
-      text = text.replace(pattern, (m) => {
-        const token = `__NUMPROTECT_${idx++}__`;
-        protections.push([token, m]);
-        return token;
-      });
-      return { text, protections };
-    }
-    function restoreWordNumbers(text, protections) {
-      for (const [token, orig] of protections) {
-        text = text.replace(token, orig);
-      }
-      return text;
-    }
-
-    // Turn year/decade/century mentions into "___" respecting the rules.
+    // Turn year/decade/century mentions into "___" with protections.
     function maskYearish(text) {
-      // Step 1: protect numeric+word quantities ("2 million", "500 thousand")
-      const { text: t0, protections } = protectWordNumbers(text);
+      // Step 0: protect comma numbers, number+unit, currency, numeric-word combos
+      const { text: t0, protections } = protectQuantities(text);
       let t = t0;
 
       // Centuries (ordinal): "19th century", "5th Century BCE", also reversed "century 5th"
@@ -357,13 +414,19 @@
       });
 
       // Standalone likely years (1–2999) — mask only if <= 2025
-      t = t.replace(/\b([12]?\d{3})\b/g, (m, n) => {
+      // Ensure we're not inside a larger comma-number (already protected) or adjacent to letters.
+      t = t.replace(/\b([12]?\d{3})\b/g, (m, n, off, str) => {
         const v = parseInt(n, 10);
-        return v <= 2025 ? '___' : m;
+        if (v > 2025) return m;
+        // If next/prev char is a comma or digit, skip (but these were mostly protected already)
+        const prev = off > 0 ? str[off - 1] : '';
+        const next = off + m.length < str.length ? str[off + m.length] : '';
+        if (/[,\d]/.test(prev) || /[,\d]/.test(next)) return m; // part of a continuous numeric string
+        return '___';
       });
 
-      // Step 2: restore protected numeric+word quantities
-      t = restoreWordNumbers(t, protections);
+      // Step 2: restore protected quantities
+      t = restoreQuantities(t, protections);
       return t;
     }
 
