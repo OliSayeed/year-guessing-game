@@ -5,153 +5,49 @@
   <title>Guess the year</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    /* ===== App shell (light) ===== */
     :root {
       --bg: #ffffff;
       --panel: #f8f9fa;
-      --ink: #202122;      /* Wikipedia-ish */
-      --muted: #54595d;    /* Wikipedia-ish */
+      --ink: #202122;
+      --muted: #54595d;
       --accent: #36c;
       --bad: #b32424;
       --good: #14866d;
       --warn: #ac6600;
-      --border: #eaecf0;   /* Wikipedia-ish border */
+      --border: #eaecf0;
     }
-    html, body {
-      height: 100%;
-      margin: 0;
-      background: var(--bg);
-      color: var(--ink);
-      font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-    }
-    .wrap {
-      max-width: 1050px;
-      margin: 32px auto 64px;
-      padding: 0 16px;
-    }
-    h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      margin: 0 0 16px;
-    }
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 8px 18px rgba(0,0,0,0.05);
-    }
-    .row {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 16px;
-      align-items: center;
-    }
-    input[type="text"] {
-      flex: 1 1 280px;
-      background: #fff;
-      color: var(--ink);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 14px;
-      font-size: 1rem;
-    }
-    input[type="text"]::placeholder { color: #8a8f96; }
-    button {
-      cursor: pointer;
-      background: #fff;
-      color: var(--ink);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-weight: 600;
-      letter-spacing: .2px;
-    }
-    button.primary {
-      background: #eef3ff;
-      border-color: #cdd6f4;
-      color: #234c9f;
-    }
-    button:disabled { opacity: .6; cursor: not-allowed; }
-    .status {
-      margin-top: 10px;
-      color: var(--muted);
-      min-height: 1.4em;
-    }
-    .status.good { color: var(--good); }
-    .status.bad  { color: var(--bad); }
-    .status.warn { color: var(--warn); }
-    .meta {
-      margin-top: 8px;
-      font-size: .95rem;
-      color: var(--muted);
-    }
-    .hidden { display: none !important; }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
+    html, body { height:100%; margin:0; background:var(--bg); color:var(--ink);
+      font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";}
+    .wrap { max-width:1050px; margin:32px auto 64px; padding:0 16px; }
+    h1 { font-size:2rem; font-weight:700; margin:0 0 16px; }
+    .card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:0 8px 18px rgba(0,0,0,.05); }
+    .row { display:flex; gap:12px; flex-wrap:wrap; margin-top:16px; align-items:center; }
+    input[type="text"]{ flex:1 1 280px; background:#fff; color:var(--ink); border:1px solid var(--border); border-radius:10px; padding:12px 14px; font-size:1rem;}
+    input::placeholder{ color:#8a8f96;}
+    button{ cursor:pointer; background:#fff; color:var(--ink); border:1px solid var(--border); border-radius:10px; padding:10px 14px; font-weight:600; letter-spacing:.2px;}
+    button.primary{ background:#eef3ff; border-color:#cdd6f4; color:#234c9f;}
+    button:disabled{ opacity:.6; cursor:not-allowed;}
+    .status{ margin-top:10px; color:var(--muted); min-height:1.4em;}
+    .status.good{ color:var(--good);} .status.bad{ color:var(--bad);} .status.warn{ color:var(--warn);}
+    .meta{ margin-top:8px; font-size:.95rem; color:var(--muted);}
+    .hidden{ display:none !important;}
+    a{ color:var(--accent); text-decoration:none;} a:hover{text-decoration:underline;}
 
-    /* ===== Wikipedia-like content styling ===== */
-    .mw {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 18px 20px;
-      overflow: auto;
-      max-height: 60vh;
-    }
-    .mw h2, .mw h3 {
-      font-family: "Linux Libertine", "Georgia", "Times New Roman", Times, serif;
-      font-weight: 700;
-      line-height: 1.3;
-      margin: 1.1em 0 .3em;
-      color: #202122;
-    }
-    .mw h2 { font-size: 1.6rem; border-bottom: 1px solid var(--border); padding-bottom: .2em; }
-    .mw h3 { font-size: 1.25rem; }
-    .mw p, .mw li {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, "Noto Sans", "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji", sans-serif;
-      font-size: 0.9375rem; /* ~15px Wikipedia-like */
-      line-height: 1.65;
-      color: #202122;
-    }
-    .mw p { margin: .5em 0 1em; }
-    .mw ul, .mw ol { margin: .5em 0 1em 2em; }
-    .mw li { margin: .25em 0; }
-    .mw a { color: var(--accent); }
-    .mw hr { border: none; border-top: 1px solid var(--border); margin: 1.25em 0; }
+    /* Wikipedia-like content */
+    .mw{ background:#fff; border:1px solid var(--border); border-radius:12px; padding:18px 20px; overflow:auto; max-height:60vh;}
+    .mw h2,.mw h3{ font-family:"Linux Libertine","Georgia","Times New Roman",Times,serif; font-weight:700; line-height:1.3; margin:1.1em 0 .3em; color:#202122;}
+    .mw h2{ font-size:1.6rem; border-bottom:1px solid var(--border); padding-bottom:.2em;}
+    .mw h3{ font-size:1.25rem;}
+    .mw p,.mw li{ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,"Noto Sans","Helvetica Neue",Arial,"Apple Color Emoji","Segoe UI Emoji",sans-serif;
+      font-size:.9375rem; line-height:1.65; color:#202122;}
+    .mw p{ margin:.5em 0 1em;} .mw ul,.mw ol{ margin:.5em 0 1em 2em;} .mw li{ margin:.25em 0;} .mw a{ color:var(--accent);} .mw hr{ border:none; border-top:1px solid var(--border); margin:1.25em 0;}
 
-    /* ===== Centered modal for the answer ===== */
-    .modal-backdrop {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.45);
-      display: none;
-      align-items: center; justify-content: center;
-      z-index: 1000;
-    }
-    .modal {
-      max-width: 520px; width: calc(100% - 32px);
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      box-shadow: 0 24px 60px rgba(0,0,0,0.25);
-      padding: 20px 22px;
-      text-align: center;
-    }
-    .modal h3 {
-      margin: 0 0 8px;
-      font-size: 1.5rem;
-      font-weight: 800;
-      letter-spacing: .2px;
-    }
-    .modal p {
-      margin: 6px 0 12px;
-      color: var(--muted);
-      font-size: 1rem;
-    }
-    .modal .actions {
-      display: flex; gap: 10px; justify-content: center; margin-top: 10px;
-    }
+    /* Modal */
+    .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:1000;}
+    .modal{ max-width:520px; width:calc(100% - 32px); background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 24px 60px rgba(0,0,0,.25); padding:20px 22px; text-align:center;}
+    .modal h3{ margin:0 0 8px; font-size:1.5rem; font-weight:800; letter-spacing:.2px;}
+    .modal p{ margin:6px 0 12px; color:var(--muted); font-size:1rem;}
+    .modal .actions{ display:flex; gap:10px; justify-content:center; margin-top:10px;}
   </style>
 </head>
 <body>
@@ -186,77 +82,56 @@
   </div>
 
   <script>
-    // ================== Utilities ==================
+    /* ================== Utilities ================== */
     const K = 7.796188950096149e-04;
 
     function drawRandomYear() {
-      const u = Math.max(Math.random(), Number.EPSILON); // avoid 0
+      const u = Math.max(Math.random(), Number.EPSILON);
       const raw = 2025 + Math.log(u) / K;
       return Math.ceil(raw);
     }
 
     function wikiTitleForYear(y) {
       if (y >= 1) return String(y);
-      const n = 1 - y; // y=0 -> 1, y=-1 -> 2, etc.
+      const n = 1 - y;
       return `${n} BC`;
     }
 
     // Canonical integer mapping (no year zero)
     function toCanonicalYearInt(label) {
       let s = String(label).trim().toUpperCase();
-
-      // decades like "1900s" => mid-decade
       const decadeMatch = s.match(/^([0-9]{3,4})S$/);
-      if (decadeMatch) {
-        const d = parseInt(decadeMatch[1], 10);
-        return clampNoYearZero(d + 5);
-      }
-
+      if (decadeMatch) return clampNoYearZero(parseInt(decadeMatch[1], 10) + 5);
       s = s.replace(/[,]/g, ' ').replace(/\s+/g, ' ').trim();
-
       const adPrefix = s.match(/^(AD|CE)\s+([0-9]{1,4})$/);
       if (adPrefix) return clampNoYearZero(parseInt(adPrefix[2], 10));
-
       const adSuffix = s.match(/^([0-9]{1,4})\s*(AD|CE)$/);
       if (adSuffix) return clampNoYearZero(parseInt(adSuffix[1], 10));
-
       const bcPrefix = s.match(/^(BC|BCE)\s+([0-9]{1,4})$/);
       if (bcPrefix) return -(parseInt(bcPrefix[2], 10) - 1);
-
       const bcSuffix = s.match(/^([0-9]{1,4})\s*(BC|BCE)$/);
       if (bcSuffix) return -(parseInt(bcSuffix[1], 10) - 1);
-
       const plain = s.match(/^[-+]?[0-9]{1,5}$/);
       if (plain) return clampNoYearZero(parseInt(s, 10));
-
       throw new Error("Couldn’t parse that year. Try forms like 1066, 44 BC, or AD 800.");
     }
+    function clampNoYearZero(y){ return y === 0 ? 1 : y; }
+    function yearDistance(a,b){ return Math.abs(a-b); }
+    function canonicalToLabel(y){ return y >= 1 ? `${y}` : `${1-y} BC`; }
+    const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
 
-    function clampNoYearZero(y) { return y === 0 ? 1 : y; }
-    function yearDistance(a, b) { return Math.abs(a - b); }
+    /* ================== Wikipedia Fetch & Cleaning ================== */
 
-    function canonicalToLabel(y) {
-      if (y >= 1) return `${y}`;
-      const n = 1 - y;
-      return `${n} BC`;
-    }
-
-    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-    // ================== Wikipedia Fetch & Cleaning ==================
-
-    // Find indexes for Events/Births/Deaths
     async function fetchSectionIndexMap(yearTitle) {
       const sectionsUrl = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(yearTitle)}&prop=sections&format=json&origin=*`;
       const sResp = await fetch(sectionsUrl);
-      if (!sResp.ok) throw new Error(`Failed to fetch section list for ${yearTitle}`);
+      if (!sResp.ok) throw new Error(`Failed to fetch section list`);
       const sData = await sResp.json();
-      const out = { events: null, births: null, deaths: null };
+      const out = { events:null, births:null, deaths:null };
       if (!sData.parse || !sData.parse.sections) return out;
-
       for (const sec of sData.parse.sections) {
-        const line = (sec.line || '').toLowerCase();
-        const topish = (sec.toclevel === 1 || sec.toclevel === 2);
+        const line = (sec.line||'').toLowerCase();
+        const topish = (sec.toclevel===1 || sec.toclevel===2);
         if (!topish) continue;
         if (!out.events && line.includes('events')) out.events = sec.index;
         if (!out.births && line.includes('births')) out.births = sec.index;
@@ -268,165 +143,154 @@
     async function fetchSectionHTML(yearTitle, index) {
       const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(yearTitle)}&section=${index}&prop=text&formatversion=2&format=json&origin=*`;
       const resp = await fetch(url);
-      if (!resp.ok) throw new Error(`Failed to fetch section ${index} for ${yearTitle}`);
+      if (!resp.ok) throw new Error(`Failed to fetch section`);
       const data = await resp.json();
       return data.parse && data.parse.text ? data.parse.text : null;
     }
 
-    // Escape for regex
-    function regexEscape(s) {
-      return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
+    // Regex escape
+    function regexEscape(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
 
-    // Protect patterns before masking: numbers-with-commas and number+unit (incl. currency, percentages, areas, speeds, etc.)
+    // Protect: comma numbers, unit numbers, currency, numeric+word amounts
     function protectQuantities(text) {
       const protections = [];
       let idx = 0;
 
-      // (A) Comma-formatted numbers like 3,856 or 12,000,000 (optional decimal)
+      // Comma-formatted numbers (e.g., 3,856 or 12,000,000)
       const commaNum = /\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b/g;
-      text = text.replace(commaNum, (m) => {
-        const token = `__PROTECT_COMMA_${idx++}__`;
-        protections.push([token, m]);
-        return token;
+      text = text.replace(commaNum, m=>{
+        const t=`__PROTECT_COMMA_${idx++}__`; protections.push([t,m]); return t;
       });
 
-      // (B) Numbers immediately followed by common units (do not treat as years)
       const units = [
         // length
-        'm','meter','meters','metre','metres',
-        'km','kilometer','kilometers','kilometre','kilometres',
-        'cm','centimeter','centimeters','centimetre','centimetres',
-        'mm','millimeter','millimeters','millimetre','millimetres',
-        'mi','mile','miles','yd','yard','yards','ft','foot','feet','in','inch','inches',
-        'nm','nautical mile','nautical miles',
+        'm','meter','meters','metre','metres','km','kilometer','kilometers','kilometre','kilometres',
+        'cm','centimeter','centimeters','centimetre','centimetres','mm','millimeter','millimeters','millimetre','millimetres',
+        'mi','mile','miles','yd','yard','yards','ft','foot','feet','in','inch','inches','nm','nautical mile','nautical miles',
         // area
-        'km²','km2','m²','m2','cm²','cm2','ha','hectare','hectares',
-        'sq km','sq mi','square kilometre','square kilometres','square kilometer','square kilometers',
-        'square mile','square miles',
+        'km²','km2','m²','m2','cm²','cm2','ha','hectare','hectares','sq km','sq mi',
+        'square kilometre','square kilometres','square kilometer','square kilometers','square mile','square miles',
         // speed
         'km/h','kph','mph','m/s',
         // mass
         'kg','kilogram','kilograms','g','gram','grams','mg','ton','tons','tonne','tonnes','t','lb','lbs','pound','pounds',
-        // percentages & currency
-        '%','percent','per cent',
-        '£','€','\\$'
+        // other
+        '%','percent','per cent','£','€','\\$'
       ];
-
-      // Build regex that matches: number (with optional decimal) optional space or thin space, then unit token
-      const unitAlt = units.map(u => regexEscape(u)).join('|');
-      const numUnit = new RegExp(
-        String.raw`\b\d+(?:[.,]\d+)?(?:\s|[\u00A0\u202F])?(?:${unitAlt})\b`,
-        'gi'
-      );
-
-      text = text.replace(numUnit, (m) => {
-        const token = `__PROTECT_UNIT_${idx++}__`;
-        protections.push([token, m]);
-        return token;
+      const unitAlt = units.map(u=>regexEscape(u)).join('|');
+      const numUnit = new RegExp(String.raw`\b\d+(?:[.,]\d+)?(?:\s|[\u00A0\u202F])?(?:${unitAlt})\b`,'gi');
+      text = text.replace(numUnit, m=>{
+        const t=`__PROTECT_UNIT_${idx++}__`; protections.push([t,m]); return t;
       });
 
-      // (C) Currency formats like £12,500 or $3.5m (simple cover)
       const currency = /(?:[$£€])\s?\d[\d,]*(?:\.\d+)?\s?(?:m|million|bn|billion|k|thousand)?\b/gi;
-      text = text.replace(currency, (m) => {
-        const token = `__PROTECT_CUR_${idx++}__`;
-        protections.push([token, m]);
-        return token;
+      text = text.replace(currency, m=>{
+        const t=`__PROTECT_CUR_${idx++}__`; protections.push([t,m]); return t;
       });
 
-      // (D) Numeric + word amounts (already handled earlier in your version, keep it)
       const wordNum = /\b\d[\d,]*\s+(million|billion|thousand|hundred|dozen|lakhs?|crores?)\b/gi;
-      text = text.replace(wordNum, (m) => {
-        const token = `__PROTECT_WORDNUM_${idx++}__`;
-        protections.push([token, m]);
-        return token;
+      text = text.replace(wordNum, m=>{
+        const t=`__PROTECT_WORDNUM_${idx++}__`; protections.push([t,m]); return t;
       });
 
       return { text, protections };
     }
-
-    function restoreQuantities(text, protections) {
-      for (const [token, orig] of protections) {
-        text = text.replace(token, orig);
-      }
+    function restoreQuantities(text, protections){
+      for (const [t,orig] of protections) text = text.replace(t, orig);
       return text;
     }
 
-    // Remove citations, then mask year-like mentions; keep protected quantities intact.
-    function sanitizeHTMLPreserveStructure(html) {
+    // Collapse shorthand year ranges like "1829–31" or "1829-31" -> "1829"
+    // Only if FIRST part is a valid year (1..2025). Otherwise leave unchanged.
+    function collapseShorthandYearRanges(text){
+      return text.replace(/\b([12]?\d{3})\s*[–—-]\s*(\d{1,4})\b/g, (m, a, b) => {
+        const yearA = parseInt(a,10);
+        if (yearA >= 1 && yearA <= 2025) {
+          return a; // trim to first year
+        }
+        return m; // do not trim if first part isn't a valid year
+      });
+    }
+
+    // Remove citations, strip "[edit]" UI/text, remove doubled headings; mask years with ___
+    function sanitizeHTMLPreserveStructure(html, sectionLabel) {
       const container = document.createElement('div');
       container.innerHTML = html;
 
-      // Remove typical citation elements
+      // Remove edit UI & references
       container.querySelectorAll(
-        'sup.reference, span.reference, sup[role="note"], span.mw-cite-backlink, ol.references, div.reflist'
+        'sup.reference, span.reference, sup[role="note"], span.mw-cite-backlink, ol.references, div.reflist, span.mw-editsection'
       ).forEach(el => el.remove());
 
-      // Walk text nodes and mask as needed
+      // Remove the section's own top heading to avoid doubling (keep subheadings)
+      // Strategy: remove the first heading whose text contains the section label ("events"/"births"/"deaths")
+      const heads = container.querySelectorAll('h1,h2,h3');
+      for (const h of heads) {
+        const txt = (h.textContent || '').trim().toLowerCase().replace(/\[\s*edit\s*\]/gi,'');
+        if (txt.includes(sectionLabel.toLowerCase())) { h.remove(); break; }
+      }
+
+      // Walk text nodes: collapse shorthand ranges, then protect quantities, then mask yearish, then restore
       const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
       const changes = [];
       while (true) {
         const node = walker.nextNode();
         if (!node) break;
-        const newText = maskYearish(node.nodeValue);
-        if (newText !== node.nodeValue) changes.push([node, newText]);
-      }
-      for (const [n, t] of changes) n.nodeValue = t;
+        let t = node.nodeValue;
 
-      // Cleanup stray [1], [a] if any remain
-      const walker2 = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
-      const changes2 = [];
-      while (true) {
-        const node = walker2.nextNode();
-        if (!node) break;
-        const t = node.nodeValue.replace(/\[\s*\d+\s*\]/g, '').replace(/\[\s*[a-zA-Z]+\s*\]/g, '');
-        if (t !== node.nodeValue) changes2.push([node, t]);
+        // remove literal "[edit]" remnants
+        t = t.replace(/\[\s*edit\s*\]/gi, '');
+
+        // collapse shorthand ranges first (guards against masking half)
+        t = collapseShorthandYearRanges(t);
+
+        // protect quantities
+        const { text: t0, protections } = protectQuantities(t);
+
+        // mask years/decades/centuries -> ___
+        let masked = maskYearish(t0);
+
+        // restore protected quantities
+        masked = restoreQuantities(masked, protections);
+
+        if (masked !== node.nodeValue) changes.push([node, masked]);
       }
-      for (const [n, t] of changes2) n.nodeValue = t;
+      for (const [n, val] of changes) n.nodeValue = val;
 
       return container.innerHTML;
     }
 
-    // Turn year/decade/century mentions into "___" with protections.
+    // Mask year/decade/century mentions into "___" (numbers in words and >2025 are not masked)
     function maskYearish(text) {
-      // Step 0: protect comma numbers, number+unit, currency, numeric-word combos
-      const { text: t0, protections } = protectQuantities(text);
-      let t = t0;
+      let t = text;
 
-      // Centuries (ordinal): "19th century", "5th Century BCE", also reversed "century 5th"
+      // Centuries (ordinal)
       t = t.replace(/\b(\d{1,2})(st|nd|rd|th)\s+century(?:\s+(BC|BCE|AD|CE))?\b/gi, '___');
       t = t.replace(/\bcentury\s+(\d{1,2})(st|nd|rd|th)\b/gi, '___');
 
-      // Decades: "1900s", "420s" — only mask if <= 2025
-      t = t.replace(/\b([12]?\d{3})s\b/g, (m, n) => {
-        const v = parseInt(n, 10);
-        return v <= 2025 ? '___' : m;
-      });
+      // Decades (only if <= 2025)
+      t = t.replace(/\b([12]?\d{3})s\b/g, (m, n) => (parseInt(n,10) <= 2025 ? '___' : m));
 
-      // Specific years with era labels — always mask
+      // Years with era labels — always mask
       t = t.replace(/\b(AD|CE)\s*([12]?\d{1,3})\b/gi, '___');
       t = t.replace(/\b([12]?\d{1,3})\s*(BC|BCE)\b/gi, '___');
 
-      // Year ranges like "1939–1945" / "753-509" — mask only if BOTH ends <= 2025
-      t = t.replace(/\b([12]?\d{3})\s*[–-]\s*([12]?\d{3})\b/g, (m, a, b) => {
-        const va = parseInt(a, 10), vb = parseInt(b, 10);
+      // Numeric ranges with full years (only if BOTH <= 2025) — (we already handled shorthand earlier)
+      t = t.replace(/\b([12]?\d{3})\s*[–—-]\s*([12]?\d{3})\b/g, (m, a, b) => {
+        const va = parseInt(a,10), vb = parseInt(b,10);
         return (va <= 2025 && vb <= 2025) ? '___' : m;
       });
 
-      // Standalone likely years (1–2999) — mask only if <= 2025
-      // Ensure we're not inside a larger comma-number (already protected) or adjacent to letters.
+      // Standalone likely years (1–2999) — mask only if <= 2025 and not part of a larger numeric token
       t = t.replace(/\b([12]?\d{3})\b/g, (m, n, off, str) => {
         const v = parseInt(n, 10);
         if (v > 2025) return m;
-        // If next/prev char is a comma or digit, skip (but these were mostly protected already)
         const prev = off > 0 ? str[off - 1] : '';
         const next = off + m.length < str.length ? str[off + m.length] : '';
-        if (/[,\d]/.test(prev) || /[,\d]/.test(next)) return m; // part of a continuous numeric string
+        if (/[,\d]/.test(prev) || /[,\d]/.test(next)) return m;
         return '___';
       });
 
-      // Step 2: restore protected quantities
-      t = restoreQuantities(t, protections);
       return t;
     }
 
@@ -438,7 +302,7 @@
         if (!idx) return;
         const html = await fetchSectionHTML(title, idx);
         if (!html) return;
-        const cleaned = sanitizeHTMLPreserveStructure(html);
+        const cleaned = sanitizeHTMLPreserveStructure(html, label);
         pieces.push(`<h2>${label}</h2>${cleaned}`);
       }
 
@@ -456,20 +320,15 @@
         const title = wikiTitleForYear(y);
         try {
           const html = await loadContentForYear(title);
-          // Require some non-empty HTML to avoid blank rounds
-          if (html && html.replace(/\s+/g, '').length > 0) {
-            return { yearInt: y, title, html };
-          }
-        } catch (e) {
-          // ignore and try another year
-        }
+          if (html && html.replace(/\s+/g,'').length>0) return { yearInt:y, title, html };
+        } catch (e) { /* try again */ }
         await sleep(120);
       }
     }
 
-    // ================== Game Logic ==================
-    let answerYearInt = null;  // canonical integer answer
-    let answerTitle = null;    // Wikipedia title string we fetched
+    /* ================== Game Logic ================== */
+    let answerYearInt = null;
+    let answerTitle = null;
 
     async function startNewRound() {
       setUIBusy(true);
@@ -478,114 +337,67 @@
       document.getElementById('events').innerHTML = '<p>Fetching Wikipedia content…</p>';
 
       const result = await drawYearWithContent();
-
-      // Save answer
       answerYearInt = clampNoYearZero(result.yearInt);
       answerTitle = result.title;
 
-      // Render cleaned, Wikipedia-styled content
       document.getElementById('events').innerHTML = result.html;
       setStatus('Make your guess!', 'good');
       setMeta('Source: Wikipedia — Events/Births/Deaths (year hidden)');
       document.getElementById('again').classList.add('hidden');
 
-      const g = document.getElementById('guess');
-      g.value = '';
-      g.focus();
+      const g = document.getElementById('guess'); g.value=''; g.focus();
       setUIBusy(false);
     }
 
-    function setUIBusy(busy) {
-      document.getElementById('submit').disabled = busy;
-      document.getElementById('guess').disabled = busy;
-    }
-    function setStatus(msg, kind = '') {
-      const el = document.getElementById('status');
-      el.className = 'status' + (kind ? ' ' + kind : '');
-      el.textContent = msg;
-    }
-    function setMeta(msg) {
-      document.getElementById('meta').innerHTML = msg;
-    }
+    function setUIBusy(busy){ document.getElementById('submit').disabled=busy; document.getElementById('guess').disabled=busy; }
+    function setStatus(msg,kind=''){ const el=document.getElementById('status'); el.className='status'+(kind?' '+kind:''); el.textContent=msg; }
+    function setMeta(msg){ document.getElementById('meta').innerHTML=msg; }
 
     function onSubmitGuess() {
       const input = document.getElementById('guess').value.trim();
-      if (!input) {
-        setStatus('Please enter a guess.', 'warn');
-        return;
-      }
+      if (!input) { setStatus('Please enter a guess.','warn'); return; }
       let guessInt;
-      try {
-        guessInt = toCanonicalYearInt(input);
-      } catch (e) {
-        setStatus(e.message, 'bad');
-        return;
-      }
+      try { guessInt = toCanonicalYearInt(input); }
+      catch(e){ setStatus(e.message,'bad'); return; }
+
       const dist = yearDistance(guessInt, answerYearInt);
       const revealAns = canonicalToLabel(answerYearInt);
 
-      // Subtle status line
       let verdict;
-      if (dist === 0) {
-        verdict = `Spot on! 🎯`;
-      } else if (dist <= 2) {
-        verdict = `So close — just ${dist} year${dist===1?'':'s'} off.`;
-      } else if (dist <= 25) {
-        verdict = `${dist} years off. Not bad!`;
-      } else if (dist <= 100) {
-        verdict = `${dist} years off. Keep going!`;
-      } else {
-        verdict = `${dist} years off. Tough one — try another!`;
-      }
-      setStatus(verdict, dist === 0 ? 'good' : (dist <= 25 ? 'warn' : 'bad'));
+      if (dist===0) verdict='Spot on! 🎯';
+      else if (dist<=2) verdict=`So close — just ${dist} year${dist===1?'':'s'} off.`;
+      else if (dist<=25) verdict=`${dist} years off. Not bad!`;
+      else if (dist<=100) verdict=`${dist} years off. Keep going!`;
+      else verdict=`${dist} years off. Tough one — try another!`;
+      setStatus(verdict, dist===0 ? 'good' : (dist<=25 ? 'warn' : 'bad'));
 
-      // Reveal in a centered modal
       showAnswerModal(revealAns, dist);
-
-      // Reveal source link in meta (non-spoiler until now)
       const srcLink = `https://en.wikipedia.org/wiki/${encodeURIComponent(answerTitle)}`;
       setMeta(`Answer: <a href="${srcLink}" target="_blank" rel="noopener noreferrer">${answerTitle}</a> — Wikipedia`);
       document.getElementById('again').classList.remove('hidden');
     }
 
-    // ================== Modal helpers ==================
-    function showAnswerModal(answerLabel, dist) {
+    /* ================== Modal ================== */
+    function showAnswerModal(answerLabel, dist){
       const modal = document.getElementById('answerModal');
       document.getElementById('answerTitle').textContent = `It was ${answerLabel}`;
-      document.getElementById('answerDelta').textContent = dist === 0
-        ? 'Perfect guess!'
-        : `${dist} year${dist===1?'':'s'} off.`;
-      const linkHTML = `<a href="https://en.wikipedia.org/wiki/${encodeURIComponent(answerTitle)}" target="_blank" rel="noopener noreferrer">${answerTitle}</a>`;
-      document.getElementById('answerLinkWrap').innerHTML = linkHTML;
-
-      modal.style.display = 'flex';
+      document.getElementById('answerDelta').textContent = dist===0 ? 'Perfect guess!' : `${dist} year${dist===1?'':'s'} off.`;
+      document.getElementById('answerLinkWrap').innerHTML =
+        `<a href="https://en.wikipedia.org/wiki/${encodeURIComponent(answerTitle)}" target="_blank" rel="noopener noreferrer">${answerTitle}</a>`;
+      modal.style.display='flex';
     }
-    function hideAnswerModal() {
-      document.getElementById('answerModal').style.display = 'none';
-    }
+    function hideAnswerModal(){ document.getElementById('answerModal').style.display='none'; }
 
-    // ================== Wire up ==================
+    /* ================== Wire-up ================== */
     document.getElementById('submit').addEventListener('click', onSubmitGuess);
     document.getElementById('again').addEventListener('click', startNewRound);
-    document.getElementById('guess').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') onSubmitGuess();
-    });
-
+    document.getElementById('guess').addEventListener('keydown', e=>{ if (e.key==='Enter') onSubmitGuess(); });
     document.getElementById('closeModal').addEventListener('click', hideAnswerModal);
-    document.getElementById('playAgainModal').addEventListener('click', () => {
-      hideAnswerModal();
-      startNewRound();
-    });
-    // Dismiss modal by clicking outside
-    document.getElementById('answerModal').addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) hideAnswerModal();
-    });
-    // Escape key closes modal
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') hideAnswerModal();
-    });
+    document.getElementById('playAgainModal').addEventListener('click', ()=>{ hideAnswerModal(); startNewRound(); });
+    document.getElementById('answerModal').addEventListener('click', (e)=>{ if (e.target===e.currentTarget) hideAnswerModal(); });
+    document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') hideAnswerModal(); });
 
-    // Kick off
+    // Start
     startNewRound();
   </script>
 </body>
