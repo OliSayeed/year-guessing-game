@@ -6,21 +6,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
-      --bg: #0f172a;
-      --panel: #111827;
-      --ink: #e5e7eb;
-      --muted: #9ca3af;
-      --accent: #22d3ee;
-      --bad: #ef4444;
-      --good: #10b981;
-      --warn: #f59e0b;
+      --bg: #ffffff;
+      --panel: #f7f7fa;
+      --ink: #0b1222;
+      --muted: #4b5563;
+      --accent: #0ea5e9;
+      --bad: #b91c1c;
+      --good: #15803d;
+      --warn: #b45309;
+      --border: #e5e7eb;
     }
     html, body {
       height: 100%;
       margin: 0;
-      background: radial-gradient(1200px 700px at 10% -10%, #1f2937 0%, #0b1020 60%, #05070e 100%), var(--bg);
+      background: var(--bg);
       color: var(--ink);
-      font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
     }
     .wrap {
       max-width: 900px;
@@ -28,29 +29,29 @@
       padding: 0 16px 60px;
     }
     h1 {
-      font-size: 1.8rem;
+      font-size: 1.9rem;
       margin: 0 0 10px;
-      letter-spacing: .3px;
+      letter-spacing: .2px;
     }
     .sub {
       color: var(--muted);
       margin-bottom: 24px;
     }
     .card {
-      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
-      border: 1px solid rgba(255,255,255,0.08);
+      background: var(--panel);
+      border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 18px 18px;
-      box-shadow: 0 20px 35px rgba(0,0,0,0.35);
+      padding: 18px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.06);
     }
     #events {
       white-space: pre-wrap;
-      max-height: 50vh;
+      max-height: 55vh;
       overflow: auto;
       padding: 14px 16px;
       border-radius: 12px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.07);
+      background: #fff;
+      border: 1px solid var(--border);
     }
     .row {
       display: flex;
@@ -61,30 +62,29 @@
     }
     input[type="text"] {
       flex: 1 1 260px;
-      background: #0b1222;
+      background: #fff;
       color: var(--ink);
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid var(--border);
       border-radius: 12px;
       padding: 12px 14px;
       font-size: 1rem;
       outline: none;
     }
-    input[type="text"]::placeholder { color: #6b7280; }
+    input[type="text"]::placeholder { color: #9aa3ad; }
     button {
       cursor: pointer;
-      background: linear-gradient(180deg, #1e293b, #0f172a);
+      background: #fff;
       color: var(--ink);
-      border: 1px solid rgba(255,255,255,0.14);
+      border: 1px solid var(--border);
       border-radius: 12px;
       padding: 10px 14px;
       font-weight: 600;
       letter-spacing: .2px;
     }
     button.primary {
-      background: linear-gradient(180deg, rgba(34,211,238,0.2), rgba(34,211,238,0.08));
-      border-color: rgba(34,211,238,0.45);
-      color: #c7f9ff;
-      text-shadow: 0 0 10px rgba(34,211,238,0.45);
+      background: #ebf8ff;
+      border-color: #bfdbfe;
+      color: #075985;
     }
     button:disabled {
       opacity: .6;
@@ -112,16 +112,17 @@
       display: inline-block;
       font-size: .85rem;
       padding: 2px 8px;
-      border: 1px solid rgba(255,255,255,0.14);
+      border: 1px solid var(--border);
       border-radius: 999px;
       margin-right: 6px;
-      color: #cbd5e1;
+      color: #334155;
+      background: #fff;
     }
     .hidden { display: none !important; }
     .kbd {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.15);
+      background: #f3f4f6;
+      border: 1px solid var(--border);
       padding: 2px 6px;
       border-radius: 6px;
     }
@@ -132,13 +133,13 @@
 <body>
   <div class="wrap">
     <h1>Guess the Year</h1>
-    <div class="sub">You’ll see the <span class="pill">Events</span> section from a year’s Wikipedia page — with all years/decades/centuries removed. Type the year you think it is.</div>
+    <div class="sub">You’ll see the <span class="pill">Events</span> section from a year’s Wikipedia page — with years/decades/centuries and citation markers removed. Type the year you think it is.</div>
 
     <div class="card">
       <div id="events">Loading Wikipedia “Events” for a random year…</div>
 
       <div class="row">
-        <input id="guess" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 1066, 44 BC, AD 800, 19 CE, 200s…" />
+        <input id="guess" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 1066, 44 BC, AD 800, 1900s…" />
         <button id="submit" class="primary">Submit Guess</button>
         <button id="again" class="hidden">Play Again</button>
       </div>
@@ -153,116 +154,104 @@
 
   <script>
     // ================== Utilities ==================
-
-    // Parameter k from the prompt
     const K = 7.796188950096149e-04;
 
-    // Draw a random year with the R formula:
-    //   ceiling(2025 + log(runif(1, .Machine$double.eps, 1)) / k)
     function drawRandomYear() {
       const u = Math.max(Math.random(), Number.EPSILON); // avoid 0
       const raw = 2025 + Math.log(u) / K;
       return Math.ceil(raw);
     }
 
-    // Wikipedia year title mapping:
-    //  - For y >= 1: "1066"
-    //  - For y <= 0: "1 - y BC" (so 0 -> "1 BC", -1 -> "2 BC", etc.)
     function wikiTitleForYear(y) {
       if (y >= 1) return String(y);
       const n = 1 - y; // y=0 -> 1, y=-1 -> 2, etc.
       return `${n} BC`;
     }
 
-    // Canonical integer mapping with no year 0:
-    //  - AD n      ->  n
-    //  - 1 BC      ->  0
-    //  - 2 BC      -> -1
-    //  - 44 BC     -> -(44-1) = -43
+    // Canonical integer mapping (no year zero)
     function toCanonicalYearInt(label) {
-      // Accept things like: "1066", "AD 800", "800 AD", "800 CE", "44 BC", "44 BCE", "1900s"
       let s = String(label).trim().toUpperCase();
 
-      // Decades like "1900s" => pick mid-decade (1905) as a representative for guessing
+      // decades like "1900s" => mid-decade
       const decadeMatch = s.match(/^([0-9]{3,4})S$/);
       if (decadeMatch) {
         const d = parseInt(decadeMatch[1], 10);
         return clampNoYearZero(d + 5);
       }
 
-      // Strip punctuation
       s = s.replace(/[,]/g, ' ').replace(/\s+/g, ' ').trim();
 
-      // Handle AD/CE prefix/suffix
       const adPrefix = s.match(/^(AD|CE)\s+([0-9]{1,4})$/);
       if (adPrefix) return clampNoYearZero(parseInt(adPrefix[2], 10));
 
       const adSuffix = s.match(/^([0-9]{1,4})\s*(AD|CE)$/);
       if (adSuffix) return clampNoYearZero(parseInt(adSuffix[1], 10));
 
-      // Handle BC/BCE prefix/suffix
       const bcPrefix = s.match(/^(BC|BCE)\s+([0-9]{1,4})$/);
-      if (bcPrefix) {
-        const n = parseInt(bcPrefix[2], 10);
-        return -(n - 1);
-      }
+      if (bcPrefix) return -(parseInt(bcPrefix[2], 10) - 1);
 
       const bcSuffix = s.match(/^([0-9]{1,4})\s*(BC|BCE)$/);
-      if (bcSuffix) {
-        const n = parseInt(bcSuffix[1], 10);
-        return -(n - 1);
-      }
+      if (bcSuffix) return -(parseInt(bcSuffix[1], 10) - 1);
 
-      // Plain number
       const plain = s.match(/^[-+]?[0-9]{1,5}$/);
       if (plain) return clampNoYearZero(parseInt(s, 10));
 
       throw new Error("Couldn’t parse that year. Try forms like 1066, 44 BC, or AD 800.");
     }
 
-    // Enforce "no year zero": if 0, map to 1 (AD 1) as a harmless clamp for guesses like "0".
-    function clampNoYearZero(y) {
-      return y === 0 ? 1 : y;
+    function clampNoYearZero(y) { return y === 0 ? 1 : y; }
+    function yearDistance(a, b) { return Math.abs(a - b); }
+
+    function canonicalToLabel(y) {
+      if (y >= 1) return `${y}`;
+      const n = 1 - y;
+      return `${n} BC`;
     }
 
-    // Compute distance in years on the "no year 0" line.
-    // With our canonical mapping (1 BC = 0, AD 1 = 1), absolute difference works.
-    function yearDistance(a, b) {
-      return Math.abs(a - b);
+    // Remove citation markers and related elements from the HTML, then return TEXT.
+    function htmlEventsToPlainTextWithoutCitations(html) {
+      const container = document.createElement('div');
+      container.innerHTML = html;
+
+      // Remove common citation elements before taking innerText.
+      container.querySelectorAll(
+        'sup.reference, span.reference, sup[role="note"], span.mw-cite-backlink, ol.references, div.reflist'
+      ).forEach(el => el.remove());
+
+      // Convert to plain text.
+      let txt = container.innerText || '';
+
+      // Fallback: strip leftover bracketed numeric citations like [1], [23], [a]
+      txt = txt.replace(/\[\s*\d+\s*\]/g, '');       // [12]
+      txt = txt.replace(/\[\s*[a-zA-Z]+\s*\]/g, ''); // [a], [note]
+      txt = txt.replace(/\s{2,}/g, ' ').replace(/[ \t]+\n/g, '\n').trim();
+
+      return txt;
     }
 
-    // Strip HTML to text safely via the browser
-    function htmlToText(html) {
-      const div = document.createElement('div');
-      div.innerHTML = html;
-      return div.innerText;
-    }
-
-    // Remove years, decades, and centuries from text.
-    // We apply multiple targeted regex passes, case-insensitive.
+    // Remove years/decades/centuries from text.
     function removeYearsDecadesCenturies(text) {
       let t = text;
 
-      // Remove ordinal centuries like "19th century", "5th Century BCE", etc.
-      t = t.replace(/\b(\d{1,2})(st|nd|rd|th)\s+century(?:\s+(BC|BCE|AD|CE))?\b/gi, ''); // e.g., "19th century"
-      t = t.replace(/\bcentury\s+(\d{1,2})(st|nd|rd|th)\b/gi, ''); // rarer reversed phrasing
+      // ordinal centuries: "19th century", "5th Century BCE"
+      t = t.replace(/\b(\d{1,2})(st|nd|rd|th)\s+century(?:\s+(BC|BCE|AD|CE))?\b/gi, '');
+      t = t.replace(/\bcentury\s+(\d{1,2})(st|nd|rd|th)\b/gi, '');
 
-      // Remove decades like "1900s", "420s"
-      t = t.replace(/\b([12]?\d{3})s\b/g, ''); // 100s–2990s
-      t = t.replace(/\b(\d{3})0s\b/g, '');    // 1000s style already covered; keep double-sure
+      // decades like "1900s", "420s"
+      t = t.replace(/\b([12]?\d{3})s\b/g, '');
+      t = t.replace(/\b(\d{3})0s\b/g, '');
 
-      // Remove year numbers with BC/BCE/AD/CE
+      // with era labels
       t = t.replace(/\b(AD|CE)\s*[12]?\d{1,3}\b/gi, '');
       t = t.replace(/\b[12]?\d{1,3}\s*(BC|BCE)\b/gi, '');
 
-      // Remove year ranges like "1939–1945" (various dashes)
+      // ranges like "1939–1945" / "1939-1945"
       t = t.replace(/\b([12]?\d{3})\s*[–-]\s*([12]?\d{3})\b/g, '');
 
-      // Remove standalone likely years (1–2999) but try not to nuke day numbers:
-      // We err on the side of removing to satisfy the requirement.
+      // standalone likely years (1–2999)
       t = t.replace(/\b([12]?\d{3})\b/g, '');
 
-      // Compact extra whitespace/newlines caused by removals
+      // clean up whitespace
       t = t.replace(/[ \t]+\n/g, '\n')
            .replace(/\n{3,}/g, '\n\n')
            .replace(/[ \t]{2,}/g, ' ')
@@ -271,13 +260,10 @@
       return t;
     }
 
-    // Small helper to sleep between retries
     const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
     // ================== Wikipedia Fetch ==================
-
     async function fetchEventsSectionHTML(yearTitle) {
-      // 1) Find the section index for something named like "Events"
       const sectionsUrl = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(yearTitle)}&prop=sections&format=json&origin=*`;
       const sResp = await fetch(sectionsUrl);
       if (!sResp.ok) throw new Error(`Failed to fetch section list for ${yearTitle}`);
@@ -285,7 +271,6 @@
       if (!sData.parse || !sData.parse.sections) return null;
 
       const secs = sData.parse.sections;
-      // Look for 'Events' (some years have e.g. 'Events' under multiple regions; take the top-level one)
       let idx = null;
       for (const sec of secs) {
         const line = (sec.line || '').toLowerCase();
@@ -296,17 +281,15 @@
       }
       if (!idx) return null;
 
-      // 2) Fetch that section's rendered HTML
       const sectionUrl = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(yearTitle)}&section=${idx}&prop=text&formatversion=2&format=json&origin=*`;
       const eResp = await fetch(sectionUrl);
       if (!eResp.ok) throw new Error(`Failed to fetch Events section for ${yearTitle}`);
       const eData = await eResp.json();
       if (!eData.parse || !eData.parse.text) return null;
 
-      return eData.parse.text; // HTML string
+      return eData.parse.text; // HTML
     }
 
-    // Try multiple random draws until we get an Events section
     async function drawYearWithEvents(maxTries = 8) {
       for (let i = 0; i < maxTries; i++) {
         const y = drawRandomYear();
@@ -315,7 +298,7 @@
           const html = await fetchEventsSectionHTML(title);
           if (html) return { yearInt: y, title, html };
         } catch (e) {
-          // continue
+          // keep trying
         }
         await sleep(120);
       }
@@ -323,14 +306,13 @@
     }
 
     // ================== Game Logic ==================
-
     let answerYearInt = null;  // canonical integer answer
     let answerTitle = null;    // Wikipedia title string we fetched
 
     async function startNewRound() {
       setUIBusy(true);
       setStatus('Loading a new year…', 'warn');
-      setMeta('');
+      setMeta('Source: Wikipedia — Events section (year hidden)');
 
       const slot = document.getElementById('events');
       slot.textContent = 'Fetching Wikipedia content…';
@@ -347,17 +329,18 @@
       answerYearInt = clampNoYearZero(result.yearInt);
       answerTitle = result.title;
 
-      // Convert HTML -> text, then remove years/decades/centuries
-      const rawText = htmlToText(result.html);
-      const cleaned = removeYearsDecadesCenturies(rawText);
+      // Clean up HTML: remove citations first, then strip years/decades/centuries
+      const textNoCites = htmlEventsToPlainTextWithoutCitations(result.html);
+      const cleaned = removeYearsDecadesCenturies(textNoCites);
 
-      // Render
       slot.textContent = cleaned || '(Events section exists, but all text became empty after removing years/decades/centuries.)';
       setStatus('Make your guess!', 'good');
-      setMeta(`Source: Wikipedia — “${answerTitle}” (Events)`);
+      // Keep meta generic to avoid spoilers until after guess:
+      setMeta('Source: Wikipedia — Events section (year hidden)');
       document.getElementById('again').classList.add('hidden');
-      document.getElementById('guess').value = '';
-      document.getElementById('guess').focus();
+      const g = document.getElementById('guess');
+      g.value = '';
+      g.focus();
       setUIBusy(false);
     }
 
@@ -376,13 +359,6 @@
       document.getElementById('meta').innerHTML = msg;
     }
 
-    function canonicalToLabel(y) {
-      if (y >= 1) return `${y}`;
-      // y <= 0 => map back: n BC where n = 1 - y
-      const n = 1 - y;
-      return `${n} BC`;
-    }
-
     function onSubmitGuess() {
       const input = document.getElementById('guess').value.trim();
       if (!input) {
@@ -399,7 +375,6 @@
       const dist = yearDistance(guessInt, answerYearInt);
       const revealAns = canonicalToLabel(answerYearInt);
 
-      // Friendly verdict
       let verdict;
       if (dist === 0) {
         verdict = `Spot on! 🎯 It was ${revealAns}.`;
@@ -415,6 +390,7 @@
 
       setStatus(verdict, dist === 0 ? 'good' : (dist <= 25 ? 'warn' : 'bad'));
 
+      // Now safe to reveal the year and link
       const srcLink = `https://en.wikipedia.org/wiki/${encodeURIComponent(answerTitle)}`;
       setMeta(`Answer: <a href="${srcLink}" target="_blank" rel="noopener noreferrer">${answerTitle}</a> — Wikipedia (Events)`);
 
