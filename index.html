@@ -333,7 +333,7 @@
     async function startNewRound() {
       setUIBusy(true);
       setStatus('Loading a new year…', 'warn');
-      setMeta('Source: Wikipedia — Events/Births/Deaths (year hidden)');
+      setMeta('Source: Wikipedia');
       document.getElementById('events').innerHTML = '<p>Fetching Wikipedia content…</p>';
 
       const result = await drawYearWithContent();
@@ -342,7 +342,7 @@
 
       document.getElementById('events').innerHTML = result.html;
       setStatus('Make your guess!', 'good');
-      setMeta('Source: Wikipedia — Events/Births/Deaths (year hidden)');
+      setMeta('Source: Wikipedia');
       document.getElementById('again').classList.add('hidden');
 
       const g = document.getElementById('guess'); g.value=''; g.focus();
@@ -381,7 +381,7 @@
     function showAnswerModal(answerLabel, dist){
       const modal = document.getElementById('answerModal');
       document.getElementById('answerTitle').textContent = `It was ${answerLabel}`;
-      document.getElementById('answerDelta').textContent = dist===0 ? 'Perfect guess!' : `${dist} year${dist===1?'':'s'} off.`;
+      document.getElementById('answerDelta').textContent = dist===0 ? 'Perfect guess!' : `${dist} year${dist===1?'':'s'} off`;
       document.getElementById('answerLinkWrap').innerHTML =
         `<a href="https://en.wikipedia.org/wiki/${encodeURIComponent(answerTitle)}" target="_blank" rel="noopener noreferrer">${answerTitle}</a>`;
       modal.style.display='flex';
