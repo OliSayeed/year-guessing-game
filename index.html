@@ -166,7 +166,7 @@
         // length
         'm','meter','meters','metre','metres','km','kilometer','kilometers','kilometre','kilometres',
         'cm','centimeter','centimeters','centimetre','centimetres','mm','millimeter','millimeters','millimetre','millimetres',
-        'mi','mile','miles','yd','yard','yards','ft','foot','feet','in','inch','inches','nm','nautical mile','nautical miles',
+        'mi','mile','miles','yd','yard','yards','ft','foot','feet','inch','inches','nm','nautical mile','nautical miles',
         // area
         'acre','acres','km²','km2','m²','m2','cm²','cm2','ha','hectare','hectares','sq km','sq mi',
         'square kilometre','square kilometres','square kilometer','square kilometers','square mile','square miles',
@@ -288,7 +288,6 @@
         if (v > 2025) return m;
         const prev = off > 0 ? str[off - 1] : '';
         const next = off + m.length < str.length ? str[off + m.length] : '';
-        // Only skip if adjacent to a digit (to avoid breaking 3856 or 12,000 blocks handled elsewhere)
         if (/[0-9]/.test(prev) || /[0-9]/.test(next)) return m;
         return '___';
       });
