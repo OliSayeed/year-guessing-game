@@ -159,7 +159,7 @@
     <h1>Guess the year</h1>
 
     <div class="card">
-      <div id="events" class="mw">Loading Wikipedia content for a random year…</div>
+      <div id="events" class="mw"><p>Fetching Wikipedia content…</p></div>
 
       <div class="row">
         <input id="guess" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 1066, 44 BC, AD 800, 1900s…" />
@@ -330,7 +330,7 @@
       return text;
     }
 
-    // Turn year/decade/century mentions into "___" respecting the new rules.
+    // Turn year/decade/century mentions into "___" respecting the rules.
     function maskYearish(text) {
       // Step 1: protect numeric+word quantities ("2 million", "500 thousand")
       const { text: t0, protections } = protectWordNumbers(text);
@@ -346,11 +346,11 @@
         return v <= 2025 ? '___' : m;
       });
 
-      // Specific years with era labels — always mask (yearish even if >2025 is unlikely but explicit)
+      // Specific years with era labels — always mask
       t = t.replace(/\b(AD|CE)\s*([12]?\d{1,3})\b/gi, '___');
       t = t.replace(/\b([12]?\d{1,3})\s*(BC|BCE)\b/gi, '___');
 
-      // Year ranges like "1939–1945" / "1939-1945" — mask only if BOTH ends <= 2025
+      // Year ranges like "1939–1945" / "753-509" — mask only if BOTH ends <= 2025
       t = t.replace(/\b([12]?\d{3})\s*[–-]\s*([12]?\d{3})\b/g, (m, a, b) => {
         const va = parseInt(a, 10), vb = parseInt(b, 10);
         return (va <= 2025 && vb <= 2025) ? '___' : m;
@@ -371,7 +371,6 @@
       const idxMap = await fetchSectionIndexMap(title);
       const pieces = [];
 
-      // helper to push a section if available
       async function addSection(label, idx) {
         if (!idx) return;
         const html = await fetchSectionHTML(title, idx);
@@ -384,22 +383,25 @@
       await addSection('Births', idxMap.births);
       await addSection('Deaths', idxMap.deaths);
 
-      return pieces.join('\n') || '<p>(No Events/Births/Deaths content found for this year.)</p>';
+      return pieces.join('\n');
     }
 
-    async function drawYearWithContent(maxTries = 8) {
-      for (let i = 0; i < maxTries; i++) {
+    // Keep sampling silently until we get usable content
+    async function drawYearWithContent() {
+      while (true) {
         const y = drawRandomYear();
         const title = wikiTitleForYear(y);
         try {
           const html = await loadContentForYear(title);
-          if (html) return { yearInt: y, title, html };
+          // Require some non-empty HTML to avoid blank rounds
+          if (html && html.replace(/\s+/g, '').length > 0) {
+            return { yearInt: y, title, html };
+          }
         } catch (e) {
-          // keep trying
+          // ignore and try another year
         }
         await sleep(120);
       }
-      return null;
     }
 
     // ================== Game Logic ==================
@@ -410,24 +412,16 @@
       setUIBusy(true);
       setStatus('Loading a new year…', 'warn');
       setMeta('Source: Wikipedia — Events/Births/Deaths (year hidden)');
-
-      const slot = document.getElementById('events');
-      slot.innerHTML = '<p>Fetching Wikipedia content…</p>';
+      document.getElementById('events').innerHTML = '<p>Fetching Wikipedia content…</p>';
 
       const result = await drawYearWithContent();
-      if (!result) {
-        slot.innerHTML = '<p>Could not find suitable content after several tries. Try again.</p>';
-        setStatus('No round loaded.', 'bad');
-        setUIBusy(false);
-        return;
-      }
 
       // Save answer
       answerYearInt = clampNoYearZero(result.yearInt);
       answerTitle = result.title;
 
       // Render cleaned, Wikipedia-styled content
-      slot.innerHTML = result.html;
+      document.getElementById('events').innerHTML = result.html;
       setStatus('Make your guess!', 'good');
       setMeta('Source: Wikipedia — Events/Births/Deaths (year hidden)');
       document.getElementById('again').classList.add('hidden');
