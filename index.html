@@ -58,7 +58,7 @@
       <div id="events" class="mw"><p>Fetching Wikipedia content…</p></div>
 
       <div class="row">
-        <input id="guess" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 1066, 44 BCE…" />
+        <input id="guess" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="e.g. 1066, 44 BCE, AD 800, 1900s…" />
         <button id="submit" class="primary">Submit guess</button>
         <button id="again" class="hidden">Play again</button>
       </div>
@@ -91,6 +91,8 @@
       return Math.ceil(raw);
     }
 
+    // Use Wikipedia's conventional "BC" in titles for fetch reliability,
+    // but display with "BCE" in the UI.
     function wikiTitleForYear(y) {
       if (y >= 1) return String(y);
       const n = 1 - y;
@@ -100,24 +102,43 @@
     // Canonical integer mapping (no year zero)
     function toCanonicalYearInt(label) {
       let s = String(label).trim().toUpperCase();
+
+      // decades like "1900s"
       const decadeMatch = s.match(/^([0-9]{3,4})S$/);
       if (decadeMatch) return clampNoYearZero(parseInt(decadeMatch[1], 10) + 5);
+
+      // normalize spaces and commas
       s = s.replace(/[,]/g, ' ').replace(/\s+/g, ' ').trim();
+
+      // Accept AD/CE prefixes/suffixes (map to positive)
       const adPrefix = s.match(/^(AD|CE)\s+([0-9]{1,4})$/);
       if (adPrefix) return clampNoYearZero(parseInt(adPrefix[2], 10));
       const adSuffix = s.match(/^([0-9]{1,4})\s*(AD|CE)$/);
       if (adSuffix) return clampNoYearZero(parseInt(adSuffix[1], 10));
+
+      // Accept BC/BCE prefixes/suffixes (map to negative canonical)
       const bcPrefix = s.match(/^(BC|BCE)\s+([0-9]{1,4})$/);
       if (bcPrefix) return -(parseInt(bcPrefix[2], 10) - 1);
       const bcSuffix = s.match(/^([0-9]{1,4})\s*(BC|BCE)$/);
       if (bcSuffix) return -(parseInt(bcSuffix[1], 10) - 1);
+
+      // Plain signed/unsigned integer (treat as CE)
       const plain = s.match(/^[-+]?[0-9]{1,5}$/);
       if (plain) return clampNoYearZero(parseInt(s, 10));
-      throw new Error("Couldn’t parse that year. Try forms like 1066, 44 BC, or AD 800.");
+
+      throw new Error("Couldn’t parse that year. Try forms like 1066, 44 BCE, or AD 800.");
     }
+
     function clampNoYearZero(y){ return y === 0 ? 1 : y; }
     function yearDistance(a,b){ return Math.abs(a-b); }
-    function canonicalToLabel(y){ return y >= 1 ? `${y}` : `${1-y} BC`; }
+
+    // Display rule: CE => plain number, BCE => "N BCE"
+    function canonicalToLabel(y){
+      if (y >= 1) return `${y}`;
+      const n = 1 - y;
+      return `${n} BCE`;
+    }
+
     const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
 
     /* ================== Wikipedia Fetch & Cleaning ================== */
@@ -161,7 +182,7 @@
         const t=`__PROTECT_COMMA_${idx++}__`; protections.push([t,m]); return t;
       });
 
-      // (B1) Domain-specific labels BEFORE a number: Flight 103, Resolution 435, Boeing 747, bus 405, LS 400, K-278
+      // (B1) Domain labels BEFORE numbers: Flight 103, Resolution 435, Boeing 747, bus 405, LS 400, K-278
       const labeledNumberPatterns = [
         /\bFlight\s+\d+\b/gi,
         /\bResolution\s+\d+\b/gi,
@@ -176,7 +197,7 @@
         });
       }
 
-      // (B2) Event context verbs near counts: kills 575, killed 200, casualties 320, aged 36, age of 36
+      // (B2) Event contexts: kills 575, aged 36, casualties 320, etc.
       const contextCountPatterns = [
         /\b(kills?|killed|killing|casualties|deaths?|dead|injur(?:e|es|ed|ies)|wounds?|wounded|evacuated|arrested)\s+\d[\d,]*\b/gi,
         /\b(age|aged)\s+(?:of\s+)?\d{1,3}\b/gi
