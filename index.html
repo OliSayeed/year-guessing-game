@@ -152,7 +152,6 @@
     .modal .actions {
       display: flex; gap: 10px; justify-content: center; margin-top: 10px;
     }
-
   </style>
 </head>
 <body>
@@ -160,7 +159,7 @@
     <h1>Guess the year</h1>
 
     <div class="card">
-      <div id="events" class="mw">Loading Wikipedia “Events” for a random year…</div>
+      <div id="events" class="mw">Loading Wikipedia content for a random year…</div>
 
       <div class="row">
         <input id="guess" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 1066, 44 BC, AD 800, 1900s…" />
@@ -246,35 +245,39 @@
 
     // ================== Wikipedia Fetch & Cleaning ==================
 
-    async function fetchEventsSectionHTML(yearTitle) {
+    // Find indexes for Events/Births/Deaths
+    async function fetchSectionIndexMap(yearTitle) {
       const sectionsUrl = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(yearTitle)}&prop=sections&format=json&origin=*`;
       const sResp = await fetch(sectionsUrl);
       if (!sResp.ok) throw new Error(`Failed to fetch section list for ${yearTitle}`);
       const sData = await sResp.json();
-      if (!sData.parse || !sData.parse.sections) return null;
+      const out = { events: null, births: null, deaths: null };
+      if (!sData.parse || !sData.parse.sections) return out;
 
-      const secs = sData.parse.sections;
-      let idx = null;
-      for (const sec of secs) {
+      for (const sec of sData.parse.sections) {
         const line = (sec.line || '').toLowerCase();
-        if (line.includes('events') && (sec.toclevel === 1 || sec.toclevel === 2)) {
-          idx = sec.index;
-          break;
-        }
+        const topish = (sec.toclevel === 1 || sec.toclevel === 2);
+        if (!topish) continue;
+        if (!out.events && line.includes('events')) out.events = sec.index;
+        if (!out.births && line.includes('births')) out.births = sec.index;
+        if (!out.deaths && line.includes('deaths')) out.deaths = sec.index;
       }
-      if (!idx) return null;
-
-      const sectionUrl = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(yearTitle)}&section=${idx}&prop=text&formatversion=2&format=json&origin=*`;
-      const eResp = await fetch(sectionUrl);
-      if (!eResp.ok) throw new Error(`Failed to fetch Events section for ${yearTitle}`);
-      const eData = await eResp.json();
-      if (!eData.parse || !eData.parse.text) return null;
-
-      return eData.parse.text; // raw HTML for Events
+      return out;
     }
 
-    // Remove citations and convert year-like strings to "___" in text nodes, preserving list/paragraph HTML
-    function sanitizeEventsHTMLPreserveStructure(html) {
+    async function fetchSectionHTML(yearTitle, index) {
+      const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(yearTitle)}&section=${index}&prop=text&formatversion=2&format=json&origin=*`;
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`Failed to fetch section ${index} for ${yearTitle}`);
+      const data = await resp.json();
+      return data.parse && data.parse.text ? data.parse.text : null;
+    }
+
+    // Remove citations, then mask year-like mentions but:
+    //  - DO NOT mask numbers written fully or partly in words (e.g., "two thousand", "2 million")
+    //  - DO NOT mask plain numbers > 2025
+    //  - DO mask BC/BCE/AD/CE-labelled dates and centuries/decades when appropriate
+    function sanitizeHTMLPreserveStructure(html) {
       const container = document.createElement('div');
       container.innerHTML = html;
 
@@ -283,65 +286,113 @@
         'sup.reference, span.reference, sup[role="note"], span.mw-cite-backlink, ol.references, div.reflist'
       ).forEach(el => el.remove());
 
-      // Walk text nodes and mask years/decades/centuries
+      // Walk text nodes and mask as needed
       const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
-      const toChange = [];
+      const changes = [];
       while (true) {
         const node = walker.nextNode();
         if (!node) break;
         const newText = maskYearish(node.nodeValue);
-        if (newText !== node.nodeValue) {
-          toChange.push([node, newText]);
-        }
+        if (newText !== node.nodeValue) changes.push([node, newText]);
       }
-      for (const [node, text] of toChange) node.nodeValue = text;
+      for (const [n, t] of changes) n.nodeValue = t;
 
-      // Also remove any leftover bracketed [1], [a] artifacts within plain text
+      // Cleanup stray [1], [a] if any remain
       const walker2 = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
-      const toChange2 = [];
+      const changes2 = [];
       while (true) {
         const node = walker2.nextNode();
         if (!node) break;
         const t = node.nodeValue.replace(/\[\s*\d+\s*\]/g, '').replace(/\[\s*[a-zA-Z]+\s*\]/g, '');
-        if (t !== node.nodeValue) toChange2.push([node, t]);
+        if (t !== node.nodeValue) changes2.push([node, t]);
       }
-      for (const [node, text] of toChange2) node.nodeValue = text;
+      for (const [n, t] of changes2) n.nodeValue = t;
 
-      // Wikipedia often nests Events in lists; keep that structure intact.
       return container.innerHTML;
     }
 
-    // Turn year/decade/century mentions into "___"
+    // Protect "partly in words" numeric phrases like "2 million" before masking, then restore.
+    function protectWordNumbers(text) {
+      const protections = [];
+      const pattern = /\b\d[\d,]*\s+(million|billion|thousand|hundred|dozen|lakhs?|crores?)\b/gi;
+      let idx = 0;
+      text = text.replace(pattern, (m) => {
+        const token = `__NUMPROTECT_${idx++}__`;
+        protections.push([token, m]);
+        return token;
+      });
+      return { text, protections };
+    }
+    function restoreWordNumbers(text, protections) {
+      for (const [token, orig] of protections) {
+        text = text.replace(token, orig);
+      }
+      return text;
+    }
+
+    // Turn year/decade/century mentions into "___" respecting the new rules.
     function maskYearish(text) {
-      let t = text;
+      // Step 1: protect numeric+word quantities ("2 million", "500 thousand")
+      const { text: t0, protections } = protectWordNumbers(text);
+      let t = t0;
 
       // Centuries (ordinal): "19th century", "5th Century BCE", also reversed "century 5th"
       t = t.replace(/\b(\d{1,2})(st|nd|rd|th)\s+century(?:\s+(BC|BCE|AD|CE))?\b/gi, '___');
       t = t.replace(/\bcentury\s+(\d{1,2})(st|nd|rd|th)\b/gi, '___');
 
-      // Decades: "1900s", "420s"
-      t = t.replace(/\b([12]?\d{3})s\b/g, '___');
-      t = t.replace(/\b(\d{3})0s\b/g, '___');
+      // Decades: "1900s", "420s" — only mask if <= 2025
+      t = t.replace(/\b([12]?\d{3})s\b/g, (m, n) => {
+        const v = parseInt(n, 10);
+        return v <= 2025 ? '___' : m;
+      });
 
-      // Specific years with era labels
-      t = t.replace(/\b(AD|CE)\s*[12]?\d{1,3}\b/gi, '___');
-      t = t.replace(/\b[12]?\d{1,3}\s*(BC|BCE)\b/gi, '___');
+      // Specific years with era labels — always mask (yearish even if >2025 is unlikely but explicit)
+      t = t.replace(/\b(AD|CE)\s*([12]?\d{1,3})\b/gi, '___');
+      t = t.replace(/\b([12]?\d{1,3})\s*(BC|BCE)\b/gi, '___');
 
-      // Year ranges like "1939–1945" or "753-509"
-      t = t.replace(/\b([12]?\d{3})\s*[–-]\s*([12]?\d{3})\b/g, '___');
+      // Year ranges like "1939–1945" / "1939-1945" — mask only if BOTH ends <= 2025
+      t = t.replace(/\b([12]?\d{3})\s*[–-]\s*([12]?\d{3})\b/g, (m, a, b) => {
+        const va = parseInt(a, 10), vb = parseInt(b, 10);
+        return (va <= 2025 && vb <= 2025) ? '___' : m;
+      });
 
-      // Standalone likely years (1–2999). This can over-match dates; that’s acceptable for gameplay.
-      t = t.replace(/\b([12]?\d{3})\b/g, '___');
+      // Standalone likely years (1–2999) — mask only if <= 2025
+      t = t.replace(/\b([12]?\d{3})\b/g, (m, n) => {
+        const v = parseInt(n, 10);
+        return v <= 2025 ? '___' : m;
+      });
 
+      // Step 2: restore protected numeric+word quantities
+      t = restoreWordNumbers(t, protections);
       return t;
     }
 
-    async function drawYearWithEvents(maxTries = 8) {
+    async function loadContentForYear(title) {
+      const idxMap = await fetchSectionIndexMap(title);
+      const pieces = [];
+
+      // helper to push a section if available
+      async function addSection(label, idx) {
+        if (!idx) return;
+        const html = await fetchSectionHTML(title, idx);
+        if (!html) return;
+        const cleaned = sanitizeHTMLPreserveStructure(html);
+        pieces.push(`<h2>${label}</h2>${cleaned}`);
+      }
+
+      await addSection('Events', idxMap.events);
+      await addSection('Births', idxMap.births);
+      await addSection('Deaths', idxMap.deaths);
+
+      return pieces.join('\n') || '<p>(No Events/Births/Deaths content found for this year.)</p>';
+    }
+
+    async function drawYearWithContent(maxTries = 8) {
       for (let i = 0; i < maxTries; i++) {
         const y = drawRandomYear();
         const title = wikiTitleForYear(y);
         try {
-          const html = await fetchEventsSectionHTML(title);
+          const html = await loadContentForYear(title);
           if (html) return { yearInt: y, title, html };
         } catch (e) {
           // keep trying
@@ -358,14 +409,14 @@
     async function startNewRound() {
       setUIBusy(true);
       setStatus('Loading a new year…', 'warn');
-      setMeta('Source: Wikipedia — Events section (year hidden)');
+      setMeta('Source: Wikipedia — Events/Births/Deaths (year hidden)');
 
       const slot = document.getElementById('events');
       slot.innerHTML = '<p>Fetching Wikipedia content…</p>';
 
-      const result = await drawYearWithEvents();
+      const result = await drawYearWithContent();
       if (!result) {
-        slot.innerHTML = '<p>Could not find a suitable year with an “Events” section after several tries. Try again.</p>';
+        slot.innerHTML = '<p>Could not find suitable content after several tries. Try again.</p>';
         setStatus('No round loaded.', 'bad');
         setUIBusy(false);
         return;
@@ -375,13 +426,10 @@
       answerYearInt = clampNoYearZero(result.yearInt);
       answerTitle = result.title;
 
-      // Clean while preserving Wikipedia-like formatting
-      const cleanedHTML = sanitizeEventsHTMLPreserveStructure(result.html);
-
-      // Render
-      slot.innerHTML = cleanedHTML || '<p>(Events section exists, but after masking, no text remained.)</p>';
+      // Render cleaned, Wikipedia-styled content
+      slot.innerHTML = result.html;
       setStatus('Make your guess!', 'good');
-      setMeta('Source: Wikipedia — Events section (year hidden)');
+      setMeta('Source: Wikipedia — Events/Births/Deaths (year hidden)');
       document.getElementById('again').classList.add('hidden');
 
       const g = document.getElementById('guess');
@@ -419,10 +467,10 @@
       const dist = yearDistance(guessInt, answerYearInt);
       const revealAns = canonicalToLabel(answerYearInt);
 
-      // Status (kept subtle under the card)
+      // Subtle status line
       let verdict;
       if (dist === 0) {
-        verdict = `Spot on! 🎯 It was ${revealAns}.`;
+        verdict = `Spot on! 🎯`;
       } else if (dist <= 2) {
         verdict = `So close — just ${dist} year${dist===1?'':'s'} off.`;
       } else if (dist <= 25) {
@@ -439,8 +487,7 @@
 
       // Reveal source link in meta (non-spoiler until now)
       const srcLink = `https://en.wikipedia.org/wiki/${encodeURIComponent(answerTitle)}`;
-      setMeta(`Answer: <a href="${srcLink}" target="_blank" rel="noopener noreferrer">${answerTitle}</a> — Wikipedia (Events)`);
-
+      setMeta(`Answer: <a href="${srcLink}" target="_blank" rel="noopener noreferrer">${answerTitle}</a> — Wikipedia`);
       document.getElementById('again').classList.remove('hidden');
     }
 
